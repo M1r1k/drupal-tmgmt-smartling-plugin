@@ -1,0 +1,19 @@
+tmgmt_smartling_test.languages:
+  path: 'tmgmt_smartling_mock/v2/Http.svc/GetLanguagesForTranslate'
+  defaults:
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::get_languages'
+  requirements:
+    _access: 'TRUE'
+tmgmt_smartling_test.token:
+  path: 'tmgmt_smartling_mock/v2/Http.svc/GetToken'
+  defaults:
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::service_token'
+  requirements:
+    _access: 'TRUE'
+tmgmt_smartling_test.translate:
+  path: 'tmgmt_smartling_mock/v2/Http.svc/Translate'
+  defaults:
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::translate'
+  requirements:
+    _access: 'TRUE'
+

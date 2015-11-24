@@ -1,0 +1,12 @@
+tmgmt.translator.settings.smartling:
+  type: mapping
+  mapping:
+    api_url:
+      type: string
+      label: 'API URL'
+    project_id:
+      type: string
+      label: 'Project ID'
+    key:
+      type: string
+      label: 'Key'
