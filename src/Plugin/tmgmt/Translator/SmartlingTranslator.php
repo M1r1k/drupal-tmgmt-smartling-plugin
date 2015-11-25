@@ -37,6 +37,11 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   protected $smartlingApi;
 
   /**
+   * @var \GuzzleHttp\ClientInterface
+   */
+  protected $client;
+
+  /**
    * Constructs a LocalActionBase object.
    *
    * @param \GuzzleHttp\ClientInterface $client
@@ -58,7 +63,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
-      $container->get('smartling.api'),
+      $container->get('http_client'),
       $configuration,
       $plugin_id,
       $plugin_definition
@@ -69,7 +74,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * {@inheritdoc}
    */
   public function checkAvailable(TranslatorInterface $translator) {
-    if ($translator->getSetting('client_id') && $translator->getSetting('client_secret')) {
+    if ($translator->getSetting('api_url') && $translator->getSetting('project_id') && $translator->getSetting('key')) {
       return AvailableResult::yes();
     }
     return AvailableResult::no(t('@translator is not available. Make sure it is properly <a href=:configured>configured</a>.', [
@@ -129,9 +134,9 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * {@inheritdoc}
    */
   public function getSupportedRemoteLanguages(TranslatorInterface $translator) {
-    $languages = array();
+    $languages = [];
     // Prevent access if the translator isn't configured yet.
-    if (!$translator->getSetting('client_id')) {
+    if (!$translator->getSetting('project_id')) {
       // @todo should be implemented by an Exception.
       return $languages;
     }
@@ -201,7 +206,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * @param $headers
    *   (Optional) Array of additional HTTP headers.
    *
-   * @return \Psr\Http\Message\ResponseInterface
+   * @return array
    *   The HTTP response.
    */
   protected function doRequest(Translator $translator, $path, array $query = array(), array $headers = array()) {
