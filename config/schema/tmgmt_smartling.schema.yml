@@ -10,3 +10,7 @@ tmgmt.translator.settings.smartling:
     key:
       type: string
       label: 'Key'
+    export_format:
+      type: string
+      label: Default export format
+

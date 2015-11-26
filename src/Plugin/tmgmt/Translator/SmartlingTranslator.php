@@ -9,9 +9,11 @@ namespace Drupal\tmgmt_smartling\Plugin\tmgmt\Translator;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\tmgmt\Entity\Translator;
+use Drupal\tmgmt\Translator\TranslatableResult;
 use Drupal\tmgmt\TranslatorPluginBase;
 use Drupal\tmgmt\TranslatorInterface;
 use Drupal\tmgmt\JobInterface;
+use Drupal\tmgmt_smartling\Smartling\SmartlingApi;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -87,47 +89,27 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * {@inheritdoc}
    */
   public function checkTranslatable(TranslatorInterface $translator, JobInterface $job) {
-    // @todo check is selected language is valid.
-    return parent::checkTranslatable($translator, $job);
+    // Anything can be exported.
+    return TranslatableResult::yes();
   }
 
   /**
    * {@inheritdoc}
    */
   public function requestTranslation(JobInterface $job) {
-    // Pull the source data array through the job and flatten it.
-    $data = \Drupal::service('tmgmt.data')->filterTranslatable($job->getData());
-    $translation = array();
-    foreach ($data as $key => $value) {
-      // Query the translator API.
-      try {
-        $result = $this->doRequest($job->getTranslator(), 'Translate', array(
-          'from' => $job->getRemoteSourceLanguage(),
-          'to' => $job->getRemoteTargetLanguage(),
-          'contentType' => 'text/plain',
-          'text' => $value['#text'],
-        ), array(
-          'Content-Type' => 'text/plain',
-        ));
+    $name = "JobID" . $job->id() . '_' . $job->getSourceLangcode() . '_' . $job->getTargetLangcode();
 
-        // Lets use DOMDocument for now because this service enables us to
-        // send an array of translation sources, and we will probably use
-        // this soon.
-        $dom = new \DOMDocument;
-        $dom->loadXML($result->getBody()->getContents());
-        $items = $dom->getElementsByTagName('string');
-        $translation[$key]['#text'] = $items->item(0)->nodeValue;
+    $export = \Drupal::service('plugin.manager.tmgmt_file.format')->createInstance($job->getSetting('export_format'));
 
-        // The translation job has been successfully submitted.
-        $job->submitted('The translation job has been submitted.');
-        // Save the translated data through the job.
-        $job->addTranslatedData(\Drupal::service('tmgmt.data')->unflatten($translation));
-
-      }
-      catch (RequestException $e) {
-        $job->rejected('Rejected by Smartling Translator: !error', array('!error' => $e->getResponse()->getBody()->getContents()), 'error');
-      }
+    $path = $job->getSetting('scheme') . '://tmgmt_file/' . $name . '.' .  $job->getSetting('export_format');
+    $dirname = dirname($path);
+    if (file_prepare_directory($dirname, FILE_CREATE_DIRECTORY)) {
+      $file = file_save_data($export->export($job), $path);
+      \Drupal::service('file.usage')->add($file, 'tmgmt_file', 'tmgmt_job', $job->id());
+      $job->submitted('Exported file can be downloaded <a href="@link">here</a>.', array('@link' => file_create_url($path)));
     }
+
+
   }
 
   /**
@@ -141,14 +123,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
       return $languages;
     }
     try {
-      $request = $this->doRequest($translator, 'GetLanguagesForTranslate');
-      if ($request) {
-        $dom = new \DOMDocument;
-        $dom->loadXML($request->getBody()->getContents());
-        foreach ($dom->getElementsByTagName('string') as $item) {
-          $languages[$item->nodeValue] = $item->nodeValue;
-        }
-      }
+      $languages = $this->getSmartlingApi($translator)->getLocaleList();
     }
     catch (\Exception $e) {
       drupal_set_message($e->getMessage(),
@@ -214,6 +189,17 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
     // @todo Implement it in a proper way.
     $response = $this->smartlingApi->uploadFile($path);
     return $response;
+  }
+
+  /**
+   * @return \Drupal\tmgmt_smartling\Smartling\SmartlingApi
+   */
+  protected function getSmartlingApi(TranslatorInterface $translator) {
+    if (empty($this->smartlingApi)) {
+      $this->smartlingApi = new SmartlingApi($translator->getSetting('api_url'), $translator->getSetting('key'), $translator->getSetting('project_id'), $this->client, SmartlingApi::PRODUCTION_MODE);
+    }
+
+    return $this->smartlingApi;
   }
 
 }

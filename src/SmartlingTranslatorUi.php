@@ -6,6 +6,7 @@
 
 namespace Drupal\tmgmt_smartling;
 
+use Drupal\Core\StreamWrapper\StreamWrapperInterface;
 use Drupal\tmgmt\TranslatorPluginUiBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -36,7 +37,7 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase {
     $form['project_id'] = [
       '#type' => 'textfield',
       '#title' => t('Project Id'),
-      '#default_value' => $translator->getSetting('.project_id'),
+      '#default_value' => $translator->getSetting('project_id'),
       '#size' => 25,
       '#maxlength' => 25,
       '#required' => TRUE,
@@ -46,11 +47,28 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase {
       '#type' => 'textfield',
       '#title' => t('Key'),
       '#default_value' => '',
-      '#description' => $this->t('Current key: @key', ['@key' => $this->hideKey($translator->getSetting('.key'))]),
+      '#description' => t('Current key: @key', ['@key' => $this->hideKey($translator->getSetting('key'))]),
       '#size' => 40,
       '#maxlength' => 40,
       '#required' => FALSE,
     ];
+
+    // Any visible, writeable wrapper can potentially be used for the files
+    // directory, including a remote file system that integrates with a CDN.
+    foreach (\Drupal::service('stream_wrapper_manager')->getDescriptions(StreamWrapperInterface::WRITE_VISIBLE) as $scheme => $description) {
+      $options[$scheme] = $description;
+    }
+
+    if (!empty($options)) {
+      $form['scheme'] = [
+        '#type' => 'radios',
+        '#title' => t('Download method'),
+        '#default_value' => $translator->getSetting('scheme'),
+        '#options' => $options,
+        '#description' => t('Choose the location where exported files should be stored. The usage of a protected location (e.g. private://) is recommended to prevent unauthorized access.'),
+      ];
+    }
+
 
     return $form;
   }

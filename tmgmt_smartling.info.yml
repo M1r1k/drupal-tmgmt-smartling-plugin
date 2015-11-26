@@ -6,3 +6,4 @@ type: module
 
 dependencies:
   - tmgmt
+  - serialization
