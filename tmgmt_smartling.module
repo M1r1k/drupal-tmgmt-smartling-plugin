@@ -1,0 +1,46 @@
+<?php
+
+/**
+ * @file
+ * Contains
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+function tmgmt_smartling_download_file_submit(array &$form, FormStateInterface $form_state) {
+  /* @var \Drupal\tmgmt\Entity\Job $job */
+  $job = $form_state->getFormObject()->getEntity();
+  /* @var \Drupal\tmgmt_smartling\Smartling\SmartlingApi $smartlingApi */
+  $smartlingApi = $job->getTranslatorPlugin()->getSmartlingApi($job->getTranslator());
+  $retrieval_type = $job->getTranslator()->getSetting('retrieval_type');
+  // @todo try/catch block
+  $xml = $smartlingApi->downloadFile($job->getTranslatorPlugin()->getFileName($job), 'nl-NL', ['retrievalType' => $retrieval_type]);
+  $path = $job->getSetting('scheme') . '://tmgmt_smartling_translations/' . $job->getTranslatorPlugin()->getFileName($job);
+  $dirname = dirname($path);
+  if (file_prepare_directory($dirname, FILE_CREATE_DIRECTORY) && ($file = file_save_data($xml, $path, FILE_EXISTS_REPLACE))) {
+    $extension = pathinfo($file->getFileUri(), PATHINFO_EXTENSION);
+    $plugin = \Drupal::service('plugin.manager.tmgmt_file.format')->createInstance($extension);
+    if ($plugin) {
+      // Validate the file on job.
+      $validated_job = $plugin->validateImport($file->getFileUri(), $job);
+      if (!$validated_job) {
+        $job->addMessage('Failed to validate file, import aborted.', array(), 'error');
+      }
+      elseif ($validated_job->id() != $job->id()) {
+        $job->addMessage('The imported file job id @file_id does not match the job id @job_id.', array(
+          '@file_id' => $validated_job->id(),
+          '@job_id' => $job->id(),
+        ), 'error');
+      }
+      else {
+        try {
+          // Validation successful, start import.
+          $job->addTranslatedData($plugin->import($file->getFileUri()));
+          $job->addMessage('Successfully imported file.');
+        } catch (Exception $e) {
+          $job->addMessage('File import failed with the following message: @message', array('@message' => $e->getMessage()), 'error');
+        }
+      }
+    }
+  }
+}
