@@ -7,6 +7,7 @@
 namespace Drupal\tmgmt_smartling;
 
 use Drupal\Core\StreamWrapper\StreamWrapperInterface;
+use Drupal\tmgmt\JobInterface;
 use Drupal\tmgmt\TranslatorPluginUiBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -46,12 +47,32 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase {
     $form['key'] = [
       '#type' => 'textfield',
       '#title' => t('Key'),
-      '#default_value' => '',
-      '#description' => t('Current key: @key', ['@key' => $this->hideKey($translator->getSetting('key'))]),
+      '#default_value' => $translator->getSetting('key'),
       '#size' => 40,
       '#maxlength' => 40,
+      '#required' => TRUE,
+    ];
+
+    $form['retrieval_type'] = [
+      '#type' => 'select',
+      '#title' => t('The desired format for download'),
+      '#default_value' => $translator->getSetting('retrieval_type'),
+      '#options' => [
+        'pending' => t('Smartling returns any translations (including non-published translations)'),
+        'published' => t('Smartling returns only published/pre-published translations'),
+        'pseudo' => t('Smartling returns a modified version of the original text'),
+      ],
       '#required' => FALSE,
     ];
+
+    $form['callback_url_use'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Use Smartling callback: /smartling/callback/%cron_key'),
+      // @todo Add description to display full URL.
+      '#default_value' => $translator->getSetting('callback_url_use'),
+      '#required' => FALSE,
+    ];
+
 
     // Any visible, writeable wrapper can potentially be used for the files
     // directory, including a remote file system that integrates with a CDN.
@@ -68,7 +89,6 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase {
         '#description' => t('Choose the location where exported files should be stored. The usage of a protected location (e.g. private://) is recommended to prevent unauthorized access.'),
       ];
     }
-
 
     return $form;
   }
@@ -88,16 +108,43 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase {
   }
 
   /**
-   * Hide last 10 characters in string.
-   *
-   * @param string $key
-   *   Smartling key.
-   *
-   * @return string
-   *   Return smartling key without 10 last characters.
+   * {@inheritdoc}
    */
-  protected function hideKey($key = '') {
-    return substr($key, 0, -10) . str_repeat("*", 10);
+  public function checkoutInfo(JobInterface $job) {
+    // If the job is finished, it's not possible to import translations anymore.
+    if ($job->isFinished()) {
+      return parent::checkoutInfo($job);
+    }
+    $output = [];
+    /* @var \Drupal\tmgmt_smartling\Smartling\SmartlingApi $smartlingApi */
+    $smartlingApi = $job->getTranslatorPlugin()->getSmartlingApi($job->getTranslator());
+
+    $file_name = $job->getTranslatorPlugin()->getFileName($job);
+
+    try {
+      $status = $smartlingApi->getStatus($file_name, $job->getTargetLanguage()->getId());
+
+//      if ($status['completedStringCount'] > 0) {
+        $output = array(
+          '#type' => 'fieldset',
+          '#title' => t('Import translated file'),
+        );
+
+        $output['submit'] = array(
+          '#type' => 'submit',
+          '#value' => t('Download'),
+          '#submit' => ['tmgmt_smartling_download_file_submit'],
+        );
+
+        $output = $this->checkoutInfoWrapper($job, $output);
+//      }
+    }
+    catch (\Exception $e) {
+
+    }
+
+
+    return $output;
   }
 
 }
