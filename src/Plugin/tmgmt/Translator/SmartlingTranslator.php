@@ -8,6 +8,7 @@
 namespace Drupal\tmgmt_smartling\Plugin\tmgmt\Translator;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Url;
 use Drupal\tmgmt\Entity\Translator;
 use Drupal\tmgmt\Translator\TranslatableResult;
 use Drupal\tmgmt\TranslatorPluginBase;
@@ -116,8 +117,10 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
     }
 
     try {
-      $retrieval_type = $job->getTranslator()->getSetting('retrieval_type');
-      $this->getSmartlingApi($job->getTranslator())->uploadFile(\Drupal::service('file_system')->realpath($file->getFileUri()), $file->getFilename(), 'xliff');
+      if ($job->getTranslator()->getSetting('callback_url_use')) {
+        $url = Url::fromRoute('tmgmt_smartling.push_callback', ['job' => $job->id()])->setOptions(array('absolute' => TRUE))->toString();
+      }
+      $this->getSmartlingApi($job->getTranslator())->uploadFile(\Drupal::service('file_system')->realpath($file->getFileUri()), $file->getFilename(), 'xliff', ['callbackUrl' => $url]);
     }
     catch (\Exception $e) {
       watchdog_exception('tmgmt_smartling', $e);

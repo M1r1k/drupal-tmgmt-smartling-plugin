@@ -11,6 +11,10 @@ function tmgmt_smartling_download_file_submit(array &$form, FormStateInterface $
   /* @var \Drupal\tmgmt\Entity\Job $job */
   $job = $form_state->getFormObject()->getEntity();
   /* @var \Drupal\tmgmt_smartling\Smartling\SmartlingApi $smartlingApi */
+  tmgmt_smartling_download_file($job);
+}
+
+function tmgmt_smartling_download_file(\Drupal\tmgmt\JobInterface $job) {
   $smartlingApi = $job->getTranslatorPlugin()->getSmartlingApi($job->getTranslator());
   $retrieval_type = $job->getTranslator()->getSetting('retrieval_type');
   // @todo try/catch block
