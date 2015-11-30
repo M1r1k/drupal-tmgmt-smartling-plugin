@@ -15,7 +15,7 @@ use Drupal\tmgmt\TranslatorInterface;
 use Drupal\tmgmt\JobInterface;
 use Drupal\tmgmt_smartling\Smartling\SmartlingApi;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\RequestException;
+use Masterminds\HTML5\Exception;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tmgmt\Translator\AvailableResult;
 
@@ -97,19 +97,34 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * {@inheritdoc}
    */
   public function requestTranslation(JobInterface $job) {
-    $name = "JobID" . $job->id() . '_' . $job->getSourceLangcode() . '_' . $job->getTargetLangcode();
+    $name = $this->getFileName($job);
 
     $export = \Drupal::service('plugin.manager.tmgmt_file.format')->createInstance($job->getSetting('export_format'));
 
-    $path = $job->getSetting('scheme') . '://tmgmt_file/' . $name . '.' .  $job->getSetting('export_format');
+    $path = $job->getSetting('scheme') . '://tmgmt_sources/' . $name;
     $dirname = dirname($path);
     if (file_prepare_directory($dirname, FILE_CREATE_DIRECTORY)) {
-      $file = file_save_data($export->export($job), $path);
+      $file = file_save_data($export->export($job), $path, FILE_EXISTS_REPLACE);
       \Drupal::service('file.usage')->add($file, 'tmgmt_file', 'tmgmt_job', $job->id());
       $job->submitted('Exported file can be downloaded <a href="@link">here</a>.', array('@link' => file_create_url($path)));
     }
+    else {
+      $e = new \Exception('It is not possible to create a directory ' . $dirname);
+      watchdog_exception('tmgmt_smartling', $e);
+      $job->rejected('Job has been rejected with following error: @error',
+        array('@error' => $e->getMessage()), 'error');
+    }
 
-
+    try {
+      $retrieval_type = $job->getTranslator()->getSetting('retrieval_type');
+      $this->getSmartlingApi($job->getTranslator())->uploadFile(\Drupal::service('file_system')->realpath($file->getFileUri()), $file->getFilename(), 'xliff');
+    }
+    catch (\Exception $e) {
+      watchdog_exception('tmgmt_smartling', $e);
+      $job->rejected('Job has been rejected with following error: @error uploading @file',
+        array('@error' => $e->getMessage(), '@file' => $file->getFileUri()), 'error');
+    }
+    // @todo disallow to submit translation to unsupported language.
   }
 
   /**
@@ -149,7 +164,6 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    */
   public function getSupportedTargetLanguages(TranslatorInterface $translator, $source_language) {
     $remote_languages = $this->getSupportedRemoteLanguages($translator);
-
     // There are no language pairs, any supported language can be translated
     // into the others. If the source language is part of the languages,
     // then return them all, just remove the source language.
@@ -194,12 +208,29 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   /**
    * @return \Drupal\tmgmt_smartling\Smartling\SmartlingApi
    */
-  protected function getSmartlingApi(TranslatorInterface $translator) {
+  public function getSmartlingApi(TranslatorInterface $translator) {
     if (empty($this->smartlingApi)) {
       $this->smartlingApi = new SmartlingApi($translator->getSetting('api_url'), $translator->getSetting('key'), $translator->getSetting('project_id'), $this->client, SmartlingApi::PRODUCTION_MODE);
     }
 
     return $this->smartlingApi;
+  }
+
+  public function getFileName(JobInterface $job) {
+    return  "JobID" . $job->id() . '_' . $job->getSourceLangcode() . '_' . $job->getTargetLangcode() . '.' . $job->getSetting('export_format');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultSettings() {
+    return array(
+      'export_format' => 'xlf',
+      'allow_override' => TRUE,
+      'scheme' => 'public',
+      'retrieval_type' => 'published',
+      'callback_url_use' => FALSE,
+    );
   }
 
 }
