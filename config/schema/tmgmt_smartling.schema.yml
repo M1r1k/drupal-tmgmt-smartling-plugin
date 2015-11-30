@@ -13,4 +13,11 @@ tmgmt.translator.settings.smartling:
     export_format:
       type: string
       label: Default export format
+    callback_url_use:
+      type: boolean
+      label: 'Use Smartling callback: /smartling/callback/%cron_key'
+    retrieval_type:
+      type: string
+      label: 'The desired format for the download'
+
 
