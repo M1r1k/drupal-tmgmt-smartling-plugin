@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Mock services for MS translator.
+ * Mock services for Smartling translator.
  */
 class SmartlingTranslatorTestController {
 
@@ -52,67 +52,47 @@ class SmartlingTranslatorTestController {
   /**
    * Page callback for getting the supported languages.
    */
-  public function get_languages(Request $request) {
+  public function locales_list(Request $request) {
+    $language_es = new \stdClass();
+    $language_es->name = 'Spanish';
+    $language_es->locale = 'es';
+    $language_es->translated = 'Español';
 
-    $headers = getallheaders();
+    $language_nl = new \stdClass();
+    $language_nl->name = 'Dutch';
+    $language_nl->locale = 'nl';
+    $language_nl->translated = 'Dutch';
 
-    if ($headers['Authorization'] == 'Bearer correct token') {
-      $response_string = '<ArrayOfstring xmlns="http://schemas.smartling.com/2003/10/Serialization/Arrays" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><string>ar</string><string>bg</string><string>ca</string><string>zh-CHS</string><string>zh-CHT</string><string>cs</string><string>da</string><string>nl</string><string>en</string><string>et</string><string>fi</string><string>fr</string><string>de</string><string>el</string><string>ht</string><string>he</string><string>hi</string><string>hu</string><string>id</string><string>it</string><string>ja</string><string>ko</string><string>lv</string><string>lt</string><string>no</string><string>pl</string><string>pt</string><string>ro</string><string>ru</string><string>sk</string><string>sl</string><string>es</string><string>sv</string><string>th</string><string>tr</string><string>uk</string><string>vi</string></ArrayOfstring>';
-      $response = new Response($response_string);
-      return $response;
-    }
-    else {
-      $response = new Response('Bad request', '400', array('status' => 'Invalid token'));
-      return $response;
-    }
+    return JsonResponse::create([$language_es, $language_nl]);
   }
 
-  /**
-   * Page callback for providing the access token.
-   */
-  public function service_token(Request $request) {
+  public function get_status(Request $request) {
+    $status = [
+      "fileUri" => $request->get('fileUri'),
+      "stringCount" => 100,
+      "wordCount" => 100,
+      "approvedStringCount" => 50,
+      "completedStringCount" => 25,
+      "lastUploaded" => date('Y-m-d\Thh:mm:ss'),
+      "fileType" => 'xliff',
+    ];
 
-    if (!$request->request->has('grant_type')) {
-      return $this->trigger_response_error('global', 'required', 'Required parameter: grant_type', 'parameter', 'grant_type');
-    }
-    if (!$request->request->has('scope')) {
-      return $this->trigger_response_error('global', 'required', 'Required parameter: scope', 'parameter', 'scope');
-    }
-    if (!$request->request->has('client_id')) {
-      return $this->trigger_response_error('global', 'required', 'Required parameter: client_id', 'parameter', 'client_id');
-    }
-    if (!$request->request->has('client_secret')) {
-      return $this->trigger_response_error('global', 'required', 'Required parameter: client_secret', 'parameter', 'client_secret');
-    }
-    $response = array();
-
-    if ($request->request->get('grant_type') == 'client_credentials' && $request->request->get('scope') == 'http://api.smartlingtranslator.com' && $request->request->get('client_id') == 'correct client_id' && $request->request->get('client_secret') == 'correct client_secret') {
-      // Return the expected test value.
-      $response['access_token'] = 'correct token';
-      return new JsonResponse($response);
-    }
-    else {
-      $response['error'] = TRUE;
-      $response['error_description'] = 'Wrong parameters';
-      return new JsonResponse($response, 400);
-    }
+    return JsonResponse::create($status);
   }
 
-  /**
-   * Simulate a translation sent back to plugin.
-   */
-  public function translate() {
-    $headers = getallheaders();
-    if ($headers['Authorization'] == 'Bearer correct token') {
-      $translated_text = 'Hallo Welt';
+  public function upload_file(Request $request) {
+    $upload_status = [
+      'overWritten' => 'true',
+      'stringCount' => 100,
+      'wordCount' => 20,
+    ];
 
-      $response_str = '<string xmlns="http://schemas.smartling.com/2003/10/Serialization/">' . $translated_text . '</string>';
-      $response = new Response($response_str, '200');
-      return $response;
-    }
-    else {
-      $response = new Response('Bad request', '400', array('status' => 'Invalid token'));
-      return $response;
-    }
+    return JsonResponse::create($upload_status);
   }
+
+  public function download_file(Request $request) {
+    $xliff_string = '<?xml version="1.0" encoding="UTF-8"?> <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-strict.xsd"> <file original="xliff-core-1.2-strict.xsd" source-language="en-EN" target-language="nl-NL" datatype="plaintext" date="2015-11-29T03:11:58Z"> <header> <phase-group> <phase tool-id="tmgmt" phase-name="extraction" process-name="extraction" job-id="16"/> </phase-group> <tool tool-id="tmgmt" tool-name="Drupal Translation Management Tools"/> </header> <body> <group id="16"> <note>Hendrerit Ille Luctus Veniam</note> <trans-unit id="16][title][0][value" resname="16][title][0][value"> <source xml:lang="en-EN">Hendrerit Ille Luctus Veniam</source> <target xml:lang="nl-NL"/> <note>Text value</note> </trans-unit> <trans-unit id="16][body][0][value" resname="16][body][0][value"> <source xml:lang="en-EN">Eum hendrerit laoreet odio sino ut velit. At ideo plaga quia. At defui hendrerit mauris mos probo suscipit tation utinam. Distineo iustum ulciscor. Aliquip enim ludus pagus probo refero tation vero virtus. Defui eu euismod gemino jus lobortis nutus occuro praemitto turpis. Euismod exerci ibidem iustum laoreet mauris meus nunc persto utinam. Damnum immitto pecus tincidunt voco. Capto erat nobis pecus pertineo si suscipere valde volutpat. Euismod facilisis plaga typicus vulpes. Ad damnum gemino genitus jus laoreet luptatum oppeto paratus turpis. Abluo ad olim tamen. Nutus praesent qui sed. Ad eu ideo inhibeo letalis nulla sit wisi. Commoveo nobis quibus. Haero in nunc oppeto proprius te. Ad eligo gemino meus modo quidem quis tamen wisi ymo. Abico lobortis natu nutus qui sit. Brevitas macto mos nostrud quibus refero utrum. Blandit ea ideo natu neo secundum tego. Commoveo huic jumentum pala quadrum refoveo venio virtus. Elit quidne tation te. Et lobortis metuo. Bene erat eum gravis huic letalis occuro os pneum suscipit. Acsi duis in laoreet mos pagus pecus ratis te. Abdo hos nobis populus quis sudo vindico zelus. Autem importunus iriure jus neo nibh oppeto refoveo secundum suscipere. Ille si singularis. Antehabeo causa incassum loquor secundum sed similis typicus. Ad elit os quae secundum. Ad appellatio consectetuer duis facilisi hos in luptatum nunc. Consectetuer dolor eros esca ibidem laoreet qui refoveo torqueo. Dolore luptatum os volutpat. Exerci imputo sudo utrum veniam. Et haero letalis lobortis lucidus luptatum nutus patria paulatim sudo. Abdo acsi eros oppeto quibus. Eu genitus immitto importunus nobis oppeto pagus praesent ulciscor. At dolor exerci importunus macto voco ymo. Conventio facilisi iaceo loquor nulla quidne. Comis exerci ibidem immitto iustum te usitas vindico volutpat wisi. Iusto neque pecus sino. Abico amet genitus importunus. Abbas accumsan ad ex nibh premo probo quae typicus venio. Eu jugis lobortis lucidus magna paratus quia quidem utinam venio. Dolus hendrerit iriure modo oppeto praesent tego vereor. Amet caecus duis hendrerit ille loquor odio uxor. Aliquip aptent dignissim eum interdico quia quis ratis roto. Minim pagus utrum. Abluo amet camur elit eu jugis lenis olim qui zelus. Abico eum facilisis modo nibh paulatim pecus sagaciter tamen. Abigo duis in nunc persto vindico ymo. Adipiscing quia quidne sino utinam vulputate. Abico comis eros importunus jumentum letalis nutus saluto vereor. Consectetuer elit exputo humo ille inhibeo meus nulla premo validus. Accumsan aliquip persto populus praesent tum. Feugiat iaceo illum pneum quidem similis singularis suscipit tego zelus. Caecus ex haero humo macto melior mos oppeto singularis utinam. Antehabeo appellatio consectetuer elit iaceo ibidem os pecus venio. Fere jumentum mauris pertineo praesent sit suscipit valetudo. Antehabeo importunus te virtus. Abigo ad blandit in refero saluto suscipit tego ulciscor vicis. Blandit genitus tego ullamcorper virtus. At commodo exputo ille iriure modo os rusticus torqueo ullamcorper. Amet bene esca molior pecus venio vereor virtus. Aliquip exputo facilisi loquor os suscipit voco ymo. Facilisis hendrerit in neque occuro sino sudo validus. </source> <target xml:lang="nl-NL"/> <note>Text</note> </trans-unit> <trans-unit id="16][body][0][summary" resname="16][body][0][summary"> <source xml:lang="en-EN">Eum hendrerit laoreet odio sino ut velit. At ideo plaga quia. At defui hendrerit mauris mos probo suscipit tation utinam. Distineo iustum ulciscor. Aliquip enim ludus pagus probo refero tation vero virtus. Defui eu euismod gemino jus lobortis nutus occuro praemitto turpis. Euismod exerci ibidem iustum laoreet mauris meus nunc persto utinam. Damnum immitto pecus tincidunt voco. Capto erat nobis pecus pertineo si suscipere valde volutpat. Euismod facilisis plaga typicus vulpes. Ad damnum gemino genitus jus laoreet luptatum oppeto paratus turpis. Abluo ad olim tamen. Nutus praesent qui sed. Ad eu ideo inhibeo letalis nulla sit wisi. Commoveo nobis quibus. Haero in nunc oppeto proprius te. Ad eligo gemino meus modo quidem quis tamen wisi ymo. Abico lobortis natu nutus qui sit. Brevitas macto mos nostrud quibus refero utrum. Blandit ea ideo natu neo secundum tego. Commoveo huic jumentum pala quadrum refoveo venio virtus. Elit quidne tation te. Et lobortis metuo. Bene erat eum gravis huic letalis occuro os pneum suscipit. Acsi duis in laoreet mos pagus pecus ratis te. Abdo hos nobis populus quis sudo vindico zelus. Autem importunus iriure jus neo nibh oppeto refoveo secundum suscipere. Ille si singularis. Antehabeo causa incassum loquor secundum sed similis typicus. Ad elit os quae secundum. Ad appellatio consectetuer duis facilisi hos in luptatum nunc. Consectetuer dolor eros esca ibidem laoreet qui refoveo torqueo. Dolore luptatum os volutpat. Exerci imputo sudo utrum veniam. Et haero letalis lobortis lucidus luptatum nutus patria paulatim sudo. Abdo acsi eros oppeto quibus. Eu genitus immitto importunus nobis oppeto pagus praesent ulciscor. At dolor exerci importunus macto voco ymo. Conventio facilisi iaceo loquor nulla quidne. Comis exerci ibidem immitto iustum te usitas vindico volutpat wisi. Iusto neque pecus sino. Abico amet genitus importunus. Abbas accumsan ad ex nibh premo probo quae typicus venio. Eu jugis lobortis lucidus magna paratus quia quidem utinam venio. Dolus hendrerit iriure modo oppeto praesent tego vereor. Amet caecus duis hendrerit ille loquor odio uxor. Aliquip aptent dignissim eum interdico quia quis ratis roto. Minim pagus utrum. Abluo amet camur elit eu jugis lenis olim qui zelus. Abico eum facilisis modo nibh paulatim pecus sagaciter tamen. Abigo duis in nunc persto vindico ymo. Adipiscing quia quidne sino utinam vulputate. Abico comis eros importunus jumentum letalis nutus saluto vereor. Consectetuer elit exputo humo ille inhibeo meus nulla premo validus. Accumsan aliquip persto populus praesent tum. Feugiat iaceo illum pneum quidem similis singularis suscipit tego zelus. Caecus ex haero humo macto melior mos oppeto singularis utinam. Antehabeo appellatio consectetuer elit iaceo ibidem os pecus venio. Fere jumentum mauris pertineo praesent sit suscipit valetudo. Antehabeo importunus te virtus. Abigo ad blandit in refero saluto suscipit tego ulciscor vicis. Blandit genitus tego ullamcorper virtus. At commodo exputo ille iriure modo os rusticus torqueo ullamcorper. Amet bene esca molior pecus venio vereor virtus. Aliquip exputo facilisi loquor os suscipit voco ymo. Facilisis hendrerit in neque occuro sino sudo validus. </source> <target xml:lang="nl-NL"/> <note>Summary</note> </trans-unit> <trans-unit id="16][field_image][0][alt" resname="16][field_image][0][alt"> <source xml:lang="en-EN">Consequat patria quidne. Acsi consequat diam ex facilisis melior.</source> <target xml:lang="nl-NL"/> <note>Alternative text</note> </trans-unit> <trans-unit id="16][field_image][0][title" resname="16][field_image][0][title"> <source xml:lang="en-EN">Causa plaga proprius. Aliquip caecus causa euismod ille jus laoreet oppeto torqueo verto.</source> <target xml:lang="nl-NL"/> <note>Title</note> </trans-unit> </group> </body> </file> </xliff>';
+    return new Response($xliff_string);
+  }
+
 }

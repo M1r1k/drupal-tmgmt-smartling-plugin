@@ -1,19 +1,25 @@
-tmgmt_smartling_test.languages:
-  path: 'tmgmt_smartling_mock/v2/Http.svc/GetLanguagesForTranslate'
+tmgmt_smartling_test.download_file:
+  path: 'tmgmt-smartling/v1/file/get'
   defaults:
-    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::get_languages'
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::download_file'
   requirements:
     _access: 'TRUE'
-tmgmt_smartling_test.token:
-  path: 'tmgmt_smartling_mock/v2/Http.svc/GetToken'
+tmgmt_smartling_test.locales_list:
+  path: 'tmgmt-smartling/v1/project/locale/list'
   defaults:
-    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::service_token'
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::locales_list'
   requirements:
     _access: 'TRUE'
-tmgmt_smartling_test.translate:
-  path: 'tmgmt_smartling_mock/v2/Http.svc/Translate'
+tmgmt_smartling_test.upload_file:
+  path: 'tmgmt-smartling/v1/file/upload'
   defaults:
-    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::translate'
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::upload_file'
+  requirements:
+    _access: 'TRUE'
+tmgmt_smartling_test.get_status:
+  path: 'tmgmt-smartling/v1/file/status'
+  defaults:
+    _controller: '\Drupal\tmgmt_smartling_test\Controller\SmartlingTranslatorTestController::get_status'
   requirements:
     _access: 'TRUE'
 
