@@ -9,14 +9,15 @@ namespace Drupal\tmgmt_smartling\Plugin\tmgmt\Translator;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Url;
+use Drupal\file\FileUsage\DatabaseFileUsageBackend;
 use Drupal\tmgmt\Entity\Translator;
 use Drupal\tmgmt\Translator\TranslatableResult;
 use Drupal\tmgmt\TranslatorPluginBase;
 use Drupal\tmgmt\TranslatorInterface;
 use Drupal\tmgmt\JobInterface;
+use Drupal\tmgmt_file\Format\FormatManager;
 use Drupal\tmgmt_smartling\Smartling\SmartlingApi;
 use GuzzleHttp\ClientInterface;
-use Masterminds\HTML5\Exception;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tmgmt\Translator\AvailableResult;
 
@@ -45,10 +46,22 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   protected $client;
 
   /**
+   * @var \Drupal\tmgmt_file\Format\FormatManager
+   */
+  protected $formatPluginsManager;
+
+  /**
+   * @var \Drupal\file\FileUsage\DatabaseFileUsageBackend
+   */
+  protected $fileUsage;
+
+  /**
    * Constructs a LocalActionBase object.
    *
    * @param \GuzzleHttp\ClientInterface $client
    *   The Guzzle HTTP client.
+   * @param \Drupal\tmgmt_file\Format\FormatManager $format_plugin_manager
+   * @param \Drupal\file\FileUsage\DatabaseFileUsageBackend $file_usage
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.
    * @param string $plugin_id
@@ -56,9 +69,11 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    * @param array $plugin_definition
    *   The plugin implementation definition.
    */
-  public function __construct(ClientInterface $client, array $configuration, $plugin_id, array $plugin_definition) {
+  public function __construct(ClientInterface $client, FormatManager $format_plugin_manager, DatabaseFileUsageBackend $file_usage, array $configuration, $plugin_id, array $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->client = $client;
+    $this->formatPluginsManager = $format_plugin_manager;
+    $this->fileUsage = $file_usage;
   }
 
   /**
@@ -67,6 +82,8 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
       $container->get('http_client'),
+      $container->get('plugin.manager.tmgmt_file.format'),
+      $container->get('file.usage'),
       $configuration,
       $plugin_id,
       $plugin_definition
@@ -100,13 +117,13 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   public function requestTranslation(JobInterface $job) {
     $name = $this->getFileName($job);
 
-    $export = \Drupal::service('plugin.manager.tmgmt_file.format')->createInstance($job->getSetting('export_format'));
+    $export = $this->formatPluginsManager->createInstance($job->getSetting('export_format'));
 
     $path = $job->getSetting('scheme') . '://tmgmt_sources/' . $name;
     $dirname = dirname($path);
     if (file_prepare_directory($dirname, FILE_CREATE_DIRECTORY)) {
       $file = file_save_data($export->export($job), $path, FILE_EXISTS_REPLACE);
-      \Drupal::service('file.usage')->add($file, 'tmgmt_file', 'tmgmt_job', $job->id());
+      $this->fileUsage->add($file, 'tmgmt_smartling', 'tmgmt_job', $job->id());
       $job->submitted('Exported file can be downloaded <a href="@link">here</a>.', array('@link' => file_create_url($path)));
     }
     else {
@@ -158,7 +175,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
   public function getDefaultRemoteLanguagesMappings() {
     return array(
       'zh-hans' => 'zh-CHS',
-      'zh-hant' => 'zh-CHT',
+      'nl' => 'nl-NL',
     );
   }
 
@@ -202,8 +219,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    *   The HTTP response.
    */
   protected function doRequest(Translator $translator, $path, array $query = array(), array $headers = array()) {
-
-    // @todo Implement it in a proper way.
+    // @todo We don't need it at all.
     $response = $this->smartlingApi->uploadFile($path);
     return $response;
   }
