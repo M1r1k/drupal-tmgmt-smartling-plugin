@@ -1,0 +1,6 @@
+tmgmt_smartling.push_callback:
+  path: '/tmgmt-smartling-callback/{job}'
+  defaults:
+    _controller: 'Drupal\tmgmt_smartling\Controller\PushCallbackController::callback'
+  requirements:
+    _access: 'TRUE'
