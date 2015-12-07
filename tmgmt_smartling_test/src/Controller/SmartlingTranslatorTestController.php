@@ -15,40 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SmartlingTranslatorTestController {
 
-
-  /**
-   * Helper to trigger mock response error.
-   *
-   * @param string $domain
-   * @param string $reason
-   * @param string $message
-   * @param string $locationType
-   * @param string $location
-   */
-  public function trigger_response_error($domain, $reason, $message, $locationType = NULL, $location = NULL) {
-
-    $response = array(
-      'error' => array(
-        'errors' => array(
-          'domain' => $domain,
-          'reason' => $reason,
-          'message' => $message,
-        ),
-        'code' => 400,
-        'message' => $message,
-      ),
-    );
-
-    if (!empty($locationType)) {
-      $response['error']['errors']['locationType'] = $locationType;
-    }
-    if (!empty($location)) {
-      $response['error']['errors']['location'] = $location;
-    }
-
-    return new JsonResponse($response);
-  }
-
   /**
    * Page callback for getting the supported languages.
    */
@@ -77,7 +43,7 @@ class SmartlingTranslatorTestController {
       "fileType" => 'xliff',
     ];
 
-    return JsonResponse::create(self::formatResponseData($status));
+    return JsonResponse::create($this->formatResponseData($status));
   }
 
   public function upload_file(Request $request) {
@@ -87,7 +53,7 @@ class SmartlingTranslatorTestController {
       'wordCount' => 20,
     ];
 
-    return JsonResponse::create(self::formatResponseData($upload_status));
+    return JsonResponse::create($this->formatResponseData($upload_status));
   }
 
   public function download_file(Request $request) {
@@ -96,7 +62,7 @@ class SmartlingTranslatorTestController {
   }
 
   protected function authorize(Request $request) {
-
+    // @todo implement authorization here via validating project_id and key.
   }
 
   protected function formatResponseData($data, $code = 'SUCCESS', $messages = []) {
