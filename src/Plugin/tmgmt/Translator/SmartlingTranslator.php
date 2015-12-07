@@ -158,7 +158,10 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
       return $languages;
     }
     try {
-      $languages = $this->getSmartlingApi($translator)->getLocaleList();
+      $smartling_languages = $this->getSmartlingApi($translator)->getLocaleList();
+      foreach ($smartling_languages['locales'] as $language) {
+        $languages[$language['locale']] = $language['locale'];
+      }
     }
     catch (\Exception $e) {
       drupal_set_message($e->getMessage(),
@@ -176,6 +179,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
     return array(
       'zh-hans' => 'zh-CHS',
       'nl' => 'nl-NL',
+      'en' => 'en-EN'
     );
   }
 
@@ -184,15 +188,9 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    */
   public function getSupportedTargetLanguages(TranslatorInterface $translator, $source_language) {
     $remote_languages = $this->getSupportedRemoteLanguages($translator);
-    // There are no language pairs, any supported language can be translated
-    // into the others. If the source language is part of the languages,
-    // then return them all, just remove the source language.
-    if (array_key_exists($source_language, $remote_languages)) {
-      unset($remote_languages[$source_language]);
-      return $remote_languages;
-    }
+    unset($remote_languages[$source_language]);
 
-    return array();
+    return $remote_languages;
   }
 
   /**
@@ -229,7 +227,7 @@ class SmartlingTranslator extends TranslatorPluginBase implements ContainerFacto
    */
   public function getSmartlingApi(TranslatorInterface $translator) {
     if (empty($this->smartlingApi)) {
-      $this->smartlingApi = new SmartlingApi($translator->getSetting('api_url'), $translator->getSetting('key'), $translator->getSetting('project_id'), $this->client, SmartlingApi::PRODUCTION_MODE);
+      $this->smartlingApi = new SmartlingApi($translator->getSetting('key'), $translator->getSetting('project_id'), $this->client, $translator->getSetting('api_url'));
     }
 
     return $this->smartlingApi;

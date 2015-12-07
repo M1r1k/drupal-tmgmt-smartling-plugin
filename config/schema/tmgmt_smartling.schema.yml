@@ -1,5 +1,5 @@
 tmgmt.translator.settings.smartling:
-  type: mapping
+  type: tmgmt.translator_base
   mapping:
     api_url:
       type: string
@@ -19,5 +19,11 @@ tmgmt.translator.settings.smartling:
     retrieval_type:
       type: string
       label: 'The desired format for the download'
+    allow_override:
+      type: boolean
+      label: 'Allow override translation file on smartling side'
+    scheme:
+      type: string
+      label: 'Schema to store translation files in'
 
 

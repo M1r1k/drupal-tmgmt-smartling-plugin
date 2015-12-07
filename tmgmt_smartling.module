@@ -18,7 +18,7 @@ function tmgmt_smartling_download_file(\Drupal\tmgmt\JobInterface $job) {
   $smartlingApi = $job->getTranslatorPlugin()->getSmartlingApi($job->getTranslator());
   $retrieval_type = $job->getTranslator()->getSetting('retrieval_type');
   // @todo try/catch block
-  $xml = $smartlingApi->downloadFile($job->getTranslatorPlugin()->getFileName($job), 'nl-NL', ['retrievalType' => $retrieval_type]);
+  $xml = $smartlingApi->downloadFile($job->getTranslatorPlugin()->getFileName($job), $job->getRemoteTargetLanguage(), ['retrievalType' => $retrieval_type]);
   $path = $job->getSetting('scheme') . '://tmgmt_smartling_translations/' . $job->getTranslatorPlugin()->getFileName($job);
   $dirname = dirname($path);
   if (file_prepare_directory($dirname, FILE_CREATE_DIRECTORY) && ($file = file_save_data($xml, $path, FILE_EXISTS_REPLACE))) {
