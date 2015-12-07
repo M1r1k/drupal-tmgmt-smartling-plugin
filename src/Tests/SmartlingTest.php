@@ -36,6 +36,7 @@ class SmartlingTest extends TMGMTTestBase {
   public function setUp() {
     parent::setUp();
     $this->addLanguage('nl');
+    $this->addLanguage('es');
     $this->translator = $this->createTranslator([
       'plugin' => 'smartling',
       'settings' => [
@@ -51,10 +52,11 @@ class SmartlingTest extends TMGMTTestBase {
    * Tests basic API methods of the plugin.
    */
   protected function testSmartling() {
-    $job = $this->createJob();
+    $job = $this->createJob('en', 'nl');
     $job->translator = $this->translator->id();
     $item = $job->addItem('test_source', 'test', '1');
     $item->save();
+    $job->save();
 
     $this->assertFalse($job->isTranslatable(), 'Check if the translator is not available at this point because we did not define the API parameters.');
 
@@ -62,11 +64,7 @@ class SmartlingTest extends TMGMTTestBase {
 //    $this->translator->setSetting('project_id', 'wrong client_id');
 //    $this->translator->setSetting('key', 'wrong client_secret');
 //    $this->translator->save();
-//
-//    $translator = $job->getTranslator();
-//    $languages = $translator->getSupportedTargetLanguages('en');
-//    $this->assertTrue(empty($languages), t('We can not get the languages using wrong api parameters.'));
-//
+
 //    // Save a correct client ID.
 //    $translator->setSetting('client_id', 'correct client_id');
 //    $translator->setSetting('client_secret', 'correct client_secret');
@@ -75,12 +73,14 @@ class SmartlingTest extends TMGMTTestBase {
     // Make sure the translator returns the correct supported target languages.
     $translator->clearLanguageCache();
     $languages = $translator->getSupportedTargetLanguages('en');
-    $this->assertTrue(isset($languages['zh-hans']));
+    $this->assertTrue(isset($languages['es']));
     $this->assertTrue(isset($languages['nl']));
 
     $this->assertTrue($job->canRequestTranslation()->getSuccess());
 
     $job->requestTranslation();
+
+    tmgmt_smartling_download_file($job);
 
     // Now it should be needs review.
     foreach ($job->getItems() as $item) {
@@ -90,7 +90,7 @@ class SmartlingTest extends TMGMTTestBase {
     $items = $job->getItems();
     $item = end($items);
     $data = $item->getData();
-    $this->assertEqual('Hallo Welt', $data['dummy']['deep_nesting']['#translation']['#text']);
+    $this->assertEqual('Text for job item with type test and id 1. nl-NL', $data['dummy']['deep_nesting']['#translation']['#text']);
   }
 
   /**

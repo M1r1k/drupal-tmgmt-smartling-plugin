@@ -8,3 +8,4 @@ dependencies:
   - tmgmt
   - tmgmt_file
   - serialization
+  - dblog
