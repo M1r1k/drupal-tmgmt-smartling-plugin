@@ -6,52 +6,15 @@
 
 namespace Drupal\tmgmt_smartling;
 
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StreamWrapper\StreamWrapperInterface;
-use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\tmgmt\JobInterface;
 use Drupal\tmgmt\TranslatorPluginUiBase;
 use Drupal\Core\Form\FormStateInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Smartling translator UI.
  */
-class SmartlingTranslatorUi extends TranslatorPluginUiBase implements ContainerFactoryPluginInterface {
-
-  /**
-   * @var \Drupal\Core\StreamWrapper\StreamWrapperManager
-   */
-  protected $streamWrapperManager;
-
-  /**
-   * Constructs a LocalActionBase object.
-   *
-   * @param \Drupal\Core\StreamWrapper\StreamWrapperManager $stream_wrapper_manager
-   *   The Guzzle HTTP client.
-   * @param array $configuration
-   *   A configuration array containing information about the plugin instance.
-   * @param string $plugin_id
-   *   The plugin_id for the plugin instance.
-   * @param array $plugin_definition
-   *   The plugin implementation definition.
-   */
-  public function __construct(StreamWrapperManager $stream_wrapper_manager, array $configuration, $plugin_id, array $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->streamWrapperManager = $stream_wrapper_manager;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-      $container->get('stream_wrapper_manager'),
-      $configuration,
-      $plugin_id,
-      $plugin_definition
-    );
-  }
+class SmartlingTranslatorUi extends TranslatorPluginUiBase {
 
   /**
    * {@inheritdoc}
@@ -110,10 +73,9 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase implements ContainerF
       '#required' => FALSE,
     ];
 
-
     // Any visible, writeable wrapper can potentially be used for the files
     // directory, including a remote file system that integrates with a CDN.
-    foreach ($this->streamWrapperManager->getDescriptions(StreamWrapperInterface::WRITE_VISIBLE) as $scheme => $description) {
+    foreach (\Drupal::service('stream_wrapper_manager')->getDescriptions(StreamWrapperInterface::WRITE_VISIBLE) as $scheme => $description) {
       $options[$scheme] = $description;
     }
 
@@ -153,33 +115,24 @@ class SmartlingTranslatorUi extends TranslatorPluginUiBase implements ContainerF
       return parent::checkoutInfo($job);
     }
     $output = [];
-    /* @var \Drupal\tmgmt_smartling\Smartling\SmartlingApi $smartlingApi */
-    $smartlingApi = $job->getTranslatorPlugin()->getSmartlingApi($job->getTranslator());
-
-    $file_name = $job->getTranslatorPlugin()->getFileName($job);
 
     try {
-//      $status = $smartlingApi->getStatus($file_name, $job->getTargetLanguage()->getId());
+      $output = array(
+        '#type' => 'fieldset',
+        '#title' => t('Import translated file'),
+      );
 
-//      if ($status['completedStringCount'] > 0) {
-        $output = array(
-          '#type' => 'fieldset',
-          '#title' => t('Import translated file'),
-        );
+      $output['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Download'),
+        '#submit' => ['tmgmt_smartling_download_file_submit'],
+      );
 
-        $output['submit'] = array(
-          '#type' => 'submit',
-          '#value' => t('Download'),
-          '#submit' => ['tmgmt_smartling_download_file_submit'],
-        );
-
-        $output = $this->checkoutInfoWrapper($job, $output);
-//      }
+      $output = $this->checkoutInfoWrapper($job, $output);
     }
     catch (\Exception $e) {
 
     }
-
 
     return $output;
   }
